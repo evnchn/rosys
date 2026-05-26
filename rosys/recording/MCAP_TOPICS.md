@@ -87,34 +87,6 @@ Schema: `WheelVelocityCommanded`
 
 ---
 
-### `/ekf/pose` — EKF Fused Pose (RobotLocator)
-
-Schema: `EkfPose`
-
-| Field | Type   | Unit   | Description                     |
-|-------|--------|--------|---------------------------------|
-| `x`   | number | meters | Fused X position (local frame)  |
-| `y`   | number | meters | Fused Y position (local frame)  |
-| `yaw` | number | rad    | Fused heading                   |
-
-**Timestamp source:** `Pose.time` (from `POSE_UPDATED` event)
-
----
-
-### `/ekf/uncertainty` — EKF Covariance
-
-Schema: `EkfUncertainty`
-
-| Field       | Type   | Unit   | Description                          |
-|-------------|--------|--------|--------------------------------------|
-| `sigma_x`   | number | meters | X position standard deviation        |
-| `sigma_y`   | number | meters | Y position standard deviation        |
-| `sigma_yaw` | number | rad    | Yaw standard deviation               |
-
-**Timestamp source:** same as `/ekf/pose` (emitted together)
-
----
-
 ### `/odometry/pose` — Raw Wheel Odometry
 
 Schema: `OdometryPose`
@@ -146,25 +118,6 @@ Emitted every control cycle (~10 Hz) while following a spline.
 | `backward`   | boolean | —    | True if driving in reverse                        |
 
 **Timestamp source:** `rosys.time()` (control loop timestamp)
-
----
-
-### `/navigation/event` — Navigation Segment Events
-
-Schema: `NavigationEvent`
-
-Emitted when a path segment starts, completes, or the full path finishes.
-
-| Field             | Type    | Unit | Description                                               |
-|-------------------|---------|------|------------------------------------------------------------|
-| `event`           | string  | —    | `segment_started`, `segment_completed`, or `path_completed`|
-| `segment_start_x` | number | m    | Segment start X (absent for `path_completed`)              |
-| `segment_start_y` | number | m    | Segment start Y                                            |
-| `segment_end_x`   | number | m    | Segment end X                                              |
-| `segment_end_y`   | number | m    | Segment end Y                                              |
-| `backward`        | boolean| —    | True if segment is driven in reverse                       |
-
-**Timestamp source:** `rosys.time()` (event timestamp)
 
 ---
 

@@ -16,6 +16,8 @@ from .robot_brain import RobotBrain
 if TYPE_CHECKING:
     from ..recording import McapLogger
 
+from ..recording.mcap_logger import NANOSECONDS_PER_SECOND
+
 
 class Wheels(Module, abc.ABC):
     """This module represents wheels for a two-wheel differential drive.
@@ -38,7 +40,6 @@ class Wheels(Module, abc.ABC):
         rosys.on_shutdown(self.stop)
 
     def register_mcap_topics(self, logger: McapLogger) -> None:
-        NANOSECONDS_PER_SECOND = 1_000_000_000
         velocity_schema = {
             'type': 'object',
             'properties': {

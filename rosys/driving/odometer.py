@@ -14,6 +14,8 @@ from .velocity_provider import VelocityProvider
 if TYPE_CHECKING:
     from ..recording import McapLogger
 
+from ..recording.mcap_logger import NANOSECONDS_PER_SECOND
+
 
 class Odometer(PoseProvider, FrameProvider):
     """An odometer collects velocity information from a given wheels module (or any velocity-providing hardware representation).
@@ -50,7 +52,6 @@ class Odometer(PoseProvider, FrameProvider):
         rosys.on_repeat(self.prune_history, 1.0)
 
     def register_mcap_topics(self, logger: McapLogger) -> None:
-        NANOSECONDS_PER_SECOND = 1_000_000_000
         logger.add_topic('/odometry/pose', schema_name='OdometryPose', schema={
             'type': 'object',
             'properties': {

@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import BinaryIO
 
 from mcap.writer import CompressionType, Writer
 
@@ -43,14 +45,15 @@ class McapLogger:
         self.chunk_size = chunk_size
 
         self._writer: Writer | None = None
-        self._file = None
+        self._file: BinaryIO | None = None
         self._file_path: Path | None = None
         self._topics: dict[str, int] = {}
         self._schemas: dict[str, tuple[str, dict]] = {}
         self._message_count: int = 0
-        self._current_data_size: int = 0
+        self._approximate_file_size: int = 0
         self._file_counter: int = 0
         self._is_recording: bool = False
+        self._warned_topics: set[str] = set()
 
         if auto_start:
             rosys.on_startup(self.start)
@@ -102,7 +105,9 @@ class McapLogger:
         if not self._is_recording or self._writer is None:
             return
         if topic not in self._topics:
-            self.log.warning('unknown topic: %s', topic)
+            if topic not in self._warned_topics:
+                self.log.warning('unknown topic: %s', topic)
+                self._warned_topics.add(topic)
             return
         if timestamp_ns is None:
             timestamp_ns = int(rosys.time() * NANOSECONDS_PER_SECOND)
@@ -114,8 +119,8 @@ class McapLogger:
             publish_time=timestamp_ns,
         )
         self._message_count += 1
-        self._current_data_size += len(encoded)
-        if self._current_data_size >= self.max_file_size:
+        self._approximate_file_size += len(encoded)
+        if self._approximate_file_size >= self.max_file_size:
             self._rotate()
 
     def _register_topic(self, topic: str, schema_name: str, schema_dict: dict) -> None:
@@ -133,24 +138,26 @@ class McapLogger:
 
     def _open_new_file(self) -> None:
         timestamp = datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S')
-        self._file_path = self.output_dir / f'{timestamp}_{self._file_counter:04d}.mcap'
+        self._file_path = self.output_dir / f'{timestamp}_{os.getpid()}_{self._file_counter:04d}.mcap'
         self._file_counter += 1
-        self._file = open(self._file_path, 'wb')
+        self._file = open(self._file_path, 'wb')  # noqa: SIM115
         self._writer = Writer(self._file, compression=self.compression, chunk_size=self.chunk_size)
         self._writer.start(profile='rosys', library='rosys-mcap-logger')
         self._topics.clear()
-        self._current_data_size = 0
+        self._approximate_file_size = 0
         for topic, (schema_name, schema_dict) in self._schemas.items():
             self._register_topic(topic, schema_name, schema_dict)
 
     def _close_file(self) -> None:
-        if self._writer is not None:
-            self._writer.finish()
+        try:
+            if self._writer is not None:
+                self._writer.finish()
+        finally:
             self._writer = None
-        if self._file is not None:
-            self._file.close()
-            self._file = None
-        self._topics.clear()
+            if self._file is not None:
+                self._file.close()
+                self._file = None
+            self._topics.clear()
 
     def _rotate(self) -> None:
         self.log.info('rotating MCAP file (%.1f MB)', self.current_file_size / 1_048_576)
@@ -159,14 +166,14 @@ class McapLogger:
         self._open_new_file()
 
     def _enforce_disk_budget(self) -> None:
-        files = sorted(self.output_dir.glob('*.mcap'), key=lambda f: f.stat().st_mtime)
-        total = sum(f.stat().st_size for f in files)
-        while total > self.max_total_size and files:
-            oldest = files.pop(0)
-            size = oldest.stat().st_size
+        file_stats = [(f, f.stat()) for f in self.output_dir.glob('*.mcap')]
+        file_stats.sort(key=lambda fs: fs[1].st_mtime)
+        total = sum(s.st_size for _, s in file_stats)
+        while total > self.max_total_size and file_stats:
+            oldest, stat = file_stats.pop(0)
             oldest.unlink()
-            total -= size
-            self.log.info('deleted old recording: %s (freed %.1f MB)', oldest.name, size / 1_048_576)
+            total -= stat.st_size
+            self.log.info('deleted old recording: %s (freed %.1f MB)', oldest.name, stat.st_size / 1_048_576)
 
     def developer_ui(self) -> None:
         from nicegui import ui

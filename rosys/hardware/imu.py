@@ -15,6 +15,8 @@ from .robot_brain import RobotBrain
 if TYPE_CHECKING:
     from ..recording import McapLogger
 
+from ..recording.mcap_logger import NANOSECONDS_PER_SECOND
+
 
 @dataclass(slots=True, kw_only=True)
 class ImuMeasurement:
@@ -37,7 +39,6 @@ class Imu(Module):
         """a new measurement has been received (argument: ImuMeasurement)"""
 
     def register_mcap_topics(self, logger: McapLogger) -> None:
-        NANOSECONDS_PER_SECOND = 1_000_000_000
         logger.add_topic('/imu', schema_name='ImuMeasurement', schema={
             'type': 'object',
             'properties': {

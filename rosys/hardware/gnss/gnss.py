@@ -15,6 +15,8 @@ from .nmea import GpsQuality
 if TYPE_CHECKING:
     from ...recording import McapLogger
 
+from ...recording.mcap_logger import NANOSECONDS_PER_SECOND
+
 SECONDS_DAY = 86400
 SECONDS_HALF_DAY = 43200
 
@@ -56,7 +58,6 @@ class Gnss(ABC):
         """a new measurement has been received (argument: ``GnssMeasurement``)"""
 
     def register_mcap_topics(self, logger: McapLogger) -> None:
-        NANOSECONDS_PER_SECOND = 1_000_000_000
         logger.add_topic('/gnss', schema_name='foxglove.LocationFix', schema={
             'type': 'object',
             'properties': {
