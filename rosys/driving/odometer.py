@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import logging
 from copy import deepcopy
+from typing import TYPE_CHECKING
 
 from nicegui import Event
 
@@ -7,6 +10,9 @@ from .. import rosys
 from ..geometry import Frame3d, FrameProvider, Pose, Pose3d, PoseStep, Rotation, Velocity
 from .pose_provider import PoseProvider
 from .velocity_provider import VelocityProvider
+
+if TYPE_CHECKING:
+    from ..recording import McapLogger
 
 
 class Odometer(PoseProvider, FrameProvider):
@@ -42,6 +48,26 @@ class Odometer(PoseProvider, FrameProvider):
         """Local-to-world transform applied to the smooth, jump-free history."""
 
         rosys.on_repeat(self.prune_history, 1.0)
+
+    def register_mcap_topics(self, logger: McapLogger) -> None:
+        NANOSECONDS_PER_SECOND = 1_000_000_000
+        logger.add_topic('/odometry/pose', schema_name='OdometryPose', schema={
+            'type': 'object',
+            'properties': {
+                'x': {'type': 'number', 'description': 'X position in meters'},
+                'y': {'type': 'number', 'description': 'Y position in meters'},
+                'yaw': {'type': 'number', 'description': 'Yaw angle in radians'},
+            },
+        })
+
+        def on_pose(pose: Pose) -> None:
+            logger.log_message('/odometry/pose', {
+                'x': pose.x,
+                'y': pose.y,
+                'yaw': pose.yaw,
+            }, timestamp_ns=int(pose.time * NANOSECONDS_PER_SECOND))
+
+        self.POSE_UPDATED.subscribe(on_pose)
 
     @property
     def pose(self) -> Pose:

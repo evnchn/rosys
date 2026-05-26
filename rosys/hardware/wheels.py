@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import abc
+from typing import TYPE_CHECKING
 
 from nicegui import Event
 
@@ -9,6 +12,9 @@ from ..helpers import remove_indentation
 from .can import CanHardware
 from .module import Module, ModuleHardware, ModuleSimulation
 from .robot_brain import RobotBrain
+
+if TYPE_CHECKING:
+    from ..recording import McapLogger
 
 
 class Wheels(Module, abc.ABC):
@@ -30,6 +36,34 @@ class Wheels(Module, abc.ABC):
         self.angular_target_speed: float = 0.0
 
         rosys.on_shutdown(self.stop)
+
+    def register_mcap_topics(self, logger: McapLogger) -> None:
+        NANOSECONDS_PER_SECOND = 1_000_000_000
+        velocity_schema = {
+            'type': 'object',
+            'properties': {
+                'linear': {'type': 'number', 'description': 'Linear velocity in m/s'},
+                'angular': {'type': 'number', 'description': 'Angular velocity in rad/s'},
+            },
+        }
+        logger.add_topic('/wheels/measured', schema_name='WheelVelocityMeasured', schema=velocity_schema)
+        logger.add_topic('/wheels/commanded', schema_name='WheelVelocityCommanded', schema=velocity_schema)
+
+        def on_measured(velocities: list[Velocity]) -> None:
+            for v in velocities:
+                logger.log_message('/wheels/measured', {
+                    'linear': v.linear,
+                    'angular': v.angular,
+                }, timestamp_ns=int(v.time * NANOSECONDS_PER_SECOND))
+
+        def on_commanded(v: Velocity) -> None:
+            logger.log_message('/wheels/commanded', {
+                'linear': v.linear,
+                'angular': v.angular,
+            }, timestamp_ns=int(v.time * NANOSECONDS_PER_SECOND))
+
+        self.VELOCITY_MEASURED.subscribe(on_measured)
+        self.VELOCITY_COMMANDED.subscribe(on_commanded)
 
     @abc.abstractmethod
     async def drive(self, linear: float, angular: float) -> None:

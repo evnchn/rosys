@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
 from nicegui import Event, ui
@@ -10,6 +11,9 @@ from ..driving.driver import PoseProvider
 from ..geometry import Rotation
 from .module import Module, ModuleHardware, ModuleSimulation
 from .robot_brain import RobotBrain
+
+if TYPE_CHECKING:
+    from ..recording import McapLogger
 
 
 @dataclass(slots=True, kw_only=True)
@@ -31,6 +35,34 @@ class Imu(Module):
 
         self.NEW_MEASUREMENT = Event[ImuMeasurement]()
         """a new measurement has been received (argument: ImuMeasurement)"""
+
+    def register_mcap_topics(self, logger: McapLogger) -> None:
+        NANOSECONDS_PER_SECOND = 1_000_000_000
+        logger.add_topic('/imu', schema_name='ImuMeasurement', schema={
+            'type': 'object',
+            'properties': {
+                'roll': {'type': 'number', 'description': 'Roll angle in radians'},
+                'pitch': {'type': 'number', 'description': 'Pitch angle in radians'},
+                'yaw': {'type': 'number', 'description': 'Yaw angle in radians'},
+                'angular_velocity_roll': {'type': 'number', 'description': 'Roll rate in rad/s'},
+                'angular_velocity_pitch': {'type': 'number', 'description': 'Pitch rate in rad/s'},
+                'angular_velocity_yaw': {'type': 'number', 'description': 'Yaw rate in rad/s'},
+                'gyro_calibration': {'type': 'number'},
+            },
+        })
+
+        def on_measurement(m: ImuMeasurement) -> None:
+            logger.log_message('/imu', {
+                'roll': m.rotation.roll,
+                'pitch': m.rotation.pitch,
+                'yaw': m.rotation.yaw,
+                'angular_velocity_roll': m.angular_velocity.roll,
+                'angular_velocity_pitch': m.angular_velocity.pitch,
+                'angular_velocity_yaw': m.angular_velocity.yaw,
+                'gyro_calibration': m.gyro_calibration,
+            }, timestamp_ns=int(m.time * NANOSECONDS_PER_SECOND))
+
+        self.NEW_MEASUREMENT.subscribe(on_measurement)
 
     def _emit_measurement(self, gyro_calibration: float, raw_rotation: Rotation, time: float) -> None:
         new_measurement = ImuMeasurement(

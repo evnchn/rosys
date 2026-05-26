@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 import numpy as np
 from nicegui import Event
@@ -11,6 +14,9 @@ from .drivable import Drivable
 from .odometer import Odometer
 from .path_segment import PathSegment
 from .pose_provider import PoseProvider
+
+if TYPE_CHECKING:
+    from ..recording import McapLogger
 
 
 @dataclass(slots=True, kw_only=True)
@@ -60,6 +66,33 @@ class Driver:
 
         self.DRIVE_STATE_UPDATED = Event[DriveState]()
         """emitted each control cycle during spline driving (argument: ``DriveState``)"""
+
+    def register_mcap_topics(self, logger: McapLogger) -> None:
+        logger.add_topic('/driver/state', schema_name='DriveState', schema={
+            'type': 'object',
+            'properties': {
+                'carrot_x': {'type': 'number', 'description': 'Carrot target X in meters'},
+                'carrot_y': {'type': 'number', 'description': 'Carrot target Y in meters'},
+                'carrot_yaw': {'type': 'number', 'description': 'Carrot target yaw in radians'},
+                'curvature': {'type': 'number', 'description': 'Steering curvature in 1/m'},
+                'turn_angle': {'type': 'number', 'description': 'Angle to carrot in radians'},
+                'spline_t': {'type': 'number', 'description': 'Progress along spline (0=start, 1=end)'},
+                'backward': {'type': 'boolean'},
+            },
+        })
+
+        def on_state(state: DriveState) -> None:
+            logger.log_message('/driver/state', {
+                'carrot_x': state.carrot_pose.x,
+                'carrot_y': state.carrot_pose.y,
+                'carrot_yaw': state.carrot_pose.yaw,
+                'curvature': state.curvature,
+                'turn_angle': state.turn_angle,
+                'spline_t': state.spline_t,
+                'backward': state.backward,
+            })
+
+        self.DRIVE_STATE_UPDATED.subscribe(on_state)
 
     @property
     def pose(self) -> Pose:
