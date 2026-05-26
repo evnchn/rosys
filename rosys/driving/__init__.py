@@ -1,5 +1,5 @@
 from .drivable import Drivable
-from .driver import DriveParameters, Driver, DrivingAbortedException
+from .driver import DriveParameters, DriveState, Driver, DrivingAbortedException
 from .driver_object import DriverObject as driver_object
 from .joystick_ import Joystick as joystick
 from .keyboard_control_ import KeyboardControl as keyboard_control
@@ -13,6 +13,7 @@ from .velocity_provider import VelocityProvider
 __all__ = [
     'Drivable',
     'DriveParameters',
+    'DriveState',
     'Driver',
     'DrivingAbortedException',
     'Odometer',
