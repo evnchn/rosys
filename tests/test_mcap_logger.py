@@ -258,7 +258,7 @@ def test_simulated_sensor_recording_30s(mcap_dir: Path) -> None:
     assert topics['/wheels/measured'] == expected_wheels // 2
     assert topics['/wheels/commanded'] == expected_wheels // 2
 
-    print(f'\n--- 30s simulated recording ---')
+    print('\n--- 30s simulated recording ---')
     print(f'  Messages: {logger._message_count}')
     print(f'  File size: {file_size / 1024:.1f} KB')
     print(f'  -> 10 min extrapolated: {file_size * 20 / 1024:.1f} KB ({file_size * 20 / 1_048_576:.2f} MB)')

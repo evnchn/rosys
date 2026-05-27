@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import BinaryIO
 
@@ -137,10 +137,10 @@ class McapLogger:
         )
 
     def _open_new_file(self) -> None:
-        timestamp = datetime.now(tz=timezone.utc).strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now(tz=UTC).strftime('%Y%m%d_%H%M%S')
         self._file_path = self.output_dir / f'{timestamp}_{os.getpid()}_{self._file_counter:04d}.mcap'
         self._file_counter += 1
-        self._file = open(self._file_path, 'wb')  # noqa: SIM115
+        self._file = open(self._file_path, 'wb')
         self._writer = Writer(self._file, compression=self.compression, chunk_size=self.chunk_size)
         self._writer.start(profile='rosys', library='rosys-mcap-logger')
         self._topics.clear()
@@ -176,7 +176,7 @@ class McapLogger:
             self.log.info('deleted old recording: %s (freed %.1f MB)', oldest.name, stat.st_size / 1_048_576)
 
     def developer_ui(self) -> None:
-        from nicegui import ui
+        from nicegui import ui  # noqa: PLC0415
 
         with ui.column():
             ui.label('MCAP Recording').classes('text-center text-bold')
