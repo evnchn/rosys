@@ -9,13 +9,12 @@ from nicegui import Event, ui
 from .. import rosys
 from ..driving.driver import PoseProvider
 from ..geometry import Rotation
+from ..recording.mcap_logger import NANOSECONDS_PER_SECOND
 from .module import Module, ModuleHardware, ModuleSimulation
 from .robot_brain import RobotBrain
 
 if TYPE_CHECKING:
     from ..recording import McapLogger
-
-from ..recording.mcap_logger import NANOSECONDS_PER_SECOND
 
 
 @dataclass(slots=True, kw_only=True)

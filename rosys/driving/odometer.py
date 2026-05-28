@@ -8,13 +8,12 @@ from nicegui import Event
 
 from .. import rosys
 from ..geometry import Frame3d, FrameProvider, Pose, Pose3d, PoseStep, Rotation, Velocity
+from ..recording.mcap_logger import NANOSECONDS_PER_SECOND
 from .pose_provider import PoseProvider
 from .velocity_provider import VelocityProvider
 
 if TYPE_CHECKING:
     from ..recording import McapLogger
-
-from ..recording.mcap_logger import NANOSECONDS_PER_SECOND
 
 
 class Odometer(PoseProvider, FrameProvider):

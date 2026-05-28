@@ -10,12 +10,11 @@ from nicegui import Event, ui
 
 from ... import rosys
 from ...geometry import GeoPoint, GeoPose
+from ...recording.mcap_logger import NANOSECONDS_PER_SECOND
 from .nmea import GpsQuality
 
 if TYPE_CHECKING:
     from ...recording import McapLogger
-
-from ...recording.mcap_logger import NANOSECONDS_PER_SECOND
 
 SECONDS_DAY = 86400
 SECONDS_HALF_DAY = 43200

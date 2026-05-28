@@ -132,7 +132,7 @@ class McapLogger:
         timestamp = datetime.now(tz=UTC).strftime('%Y%m%d_%H%M%S')
         self._file_path = self.output_dir / f'{timestamp}_{os.getpid()}_{self._file_counter:04d}.mcap'
         self._file_counter += 1
-        self._file = open(self._file_path, 'wb')
+        self._file = open(self._file_path, 'wb')  # pylint: disable=consider-using-with
         self._writer = Writer(self._file, compression=CompressionType.ZSTD, chunk_size=self.chunk_size)
         self._writer.start(profile='rosys', library='rosys-mcap-logger')
         self._topics.clear()
@@ -168,7 +168,7 @@ class McapLogger:
             self.log.info('deleted old recording: %s (freed %.1f MB)', oldest.name, stat.st_size / 1_048_576)
 
     def developer_ui(self) -> None:
-        from nicegui import ui  # noqa: PLC0415
+        from nicegui import ui  # pylint: disable=import-outside-toplevel  # noqa: PLC0415
 
         with ui.column():
             ui.label('MCAP Recording').classes('text-center text-bold')
