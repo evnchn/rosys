@@ -13,12 +13,6 @@ from .. import rosys
 
 NANOSECONDS_PER_SECOND = 1_000_000_000
 
-_COMPRESSION_MAP: dict[str, CompressionType] = {
-    'zstd': CompressionType.ZSTD,
-    'lz4': CompressionType.LZ4,
-    'none': CompressionType.NONE,
-}
-
 
 class McapLogger:
     """Records sensor data to MCAP files for replay and analysis in Foxglove Studio.
@@ -32,7 +26,6 @@ class McapLogger:
         output_dir: Path | str = '~/.rosys/mcap',
         max_file_size_mb: float = 100,
         max_total_size_mb: float = 1000,
-        compression: str = 'zstd',
         chunk_size: int = 1_048_576,
         auto_start: bool = True,
     ) -> None:
@@ -41,7 +34,6 @@ class McapLogger:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.max_file_size = int(max_file_size_mb * 1_048_576)
         self.max_total_size = int(max_total_size_mb * 1_048_576)
-        self.compression = _COMPRESSION_MAP.get(compression, CompressionType.ZSTD)
         self.chunk_size = chunk_size
 
         self._writer: Writer | None = None
@@ -141,7 +133,7 @@ class McapLogger:
         self._file_path = self.output_dir / f'{timestamp}_{os.getpid()}_{self._file_counter:04d}.mcap'
         self._file_counter += 1
         self._file = open(self._file_path, 'wb')
-        self._writer = Writer(self._file, compression=self.compression, chunk_size=self.chunk_size)
+        self._writer = Writer(self._file, compression=CompressionType.ZSTD, chunk_size=self.chunk_size)
         self._writer.start(profile='rosys', library='rosys-mcap-logger')
         self._topics.clear()
         self._approximate_file_size = 0
