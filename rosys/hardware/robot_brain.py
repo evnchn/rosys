@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 from collections import deque
@@ -38,6 +40,8 @@ class RobotBrain:
         """a line has been received from the microcontroller (argument: line as string)"""
         self.FLASH_P0_COMPLETE = Event[[]]()
         """flashing p0 was successful and 'Replica complete' was received"""
+        self.CORE_MESSAGE_RECEIVED = Event[float]()
+        """a core message was received (argument: hardware millis timestamp)"""
 
         self.log = logging.getLogger('rosys.robot_brain')
 
@@ -59,6 +63,8 @@ class RobotBrain:
         self.esp_pins_p0 = EspPins(name='p0', robot_brain=self)
 
         self._esp_lock = asyncio.Lock()
+        self._last_read_lines_time: float | None = None
+        self._last_update_delta_ms: float = 0.0
 
     @property
     def clock_offset(self) -> float | None:
@@ -191,6 +197,10 @@ class RobotBrain:
             self._hardware_time = None
 
     async def read_lines(self) -> list[tuple[float, str]]:
+        now = rosys.time()
+        if self._last_read_lines_time is not None:
+            self._last_update_delta_ms = (now - self._last_read_lines_time) * 1000
+        self._last_read_lines_time = now
         lines: list[tuple[float, str]] = []
         millis = None
         while True:
@@ -209,6 +219,7 @@ class RobotBrain:
             hardware_time: float | None = None
             if first == 'core':
                 millis = float(words.pop(0))
+                self.CORE_MESSAGE_RECEIVED.emit(millis)
                 if self.clock_offset is None:
                     continue
                 hardware_time = millis / 1000 + self.clock_offset
