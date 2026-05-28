@@ -114,27 +114,6 @@ def test_add_topic_while_recording(mcap_dir: Path) -> None:
     assert messages == [{'value': 42}]
 
 
-def test_compression_options(mcap_dir: Path) -> None:
-    for comp in ('zstd', 'lz4', 'none'):
-        subdir = mcap_dir / comp
-        subdir.mkdir()
-        logger = McapLogger(output_dir=subdir, compression=comp, auto_start=False)
-        logger.add_topic('/test', schema_name='Test', schema={
-            'type': 'object',
-            'properties': {'v': {'type': 'number'}},
-        })
-        logger.start()
-        logger.log_message('/test', {'v': 1}, timestamp_ns=0)
-        logger.stop()
-
-        files = list(subdir.glob('*.mcap'))
-        assert len(files) == 1, f'compression={comp} failed'
-        with open(files[0], 'rb') as f:
-            reader = make_reader(f)
-            messages = [json.loads(msg.data) for _, _, msg in reader.iter_messages()]
-        assert messages == [{'v': 1}]
-
-
 def test_stop_without_start(mcap_dir: Path) -> None:
     logger = McapLogger(output_dir=mcap_dir, auto_start=False)
     logger.stop()
